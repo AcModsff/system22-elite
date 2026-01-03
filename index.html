@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>SYSTEM 22: Elite Command V2.1 (Manual Control)</title>
+    <title>SYSTEM 22: Elite Command V2.4 (Safe Upload)</title>
     
     <!-- React & ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
@@ -66,7 +66,7 @@
         body {
             background-color: #020617;
             color: #e2e8f0;
-            font-family: 'JetBrains Mono', 'Cairo', monospace; /* Mixed fonts for Arabic support */
+            font-family: 'JetBrains Mono', 'Cairo', monospace; 
             overflow: hidden; 
             -webkit-tap-highlight-color: transparent;
         }
@@ -109,116 +109,18 @@
     <script type="text/babel">
         const { useState, useEffect, useRef, useCallback } = React;
 
-        // --- CONSTANTS & HELPERS (UPDATED WITH USER DATA) ---
+        // --- CONSTANTS & HELPERS ---
         const DEFAULT_MANIFESTO = [
             { id: 1, title: "السيادة المطلقة", text: "أنا لست جسدي. أنا المراقب. الجسد آلة بيولوجية تحتاج للترويض." },
             { id: 2, title: "الخلود الرقمي", text: "النظام لا ينسى. البيانات هي الحقيقة الوحيدة." },
             { id: 3, title: "قانون الـ 05:00", text: "استيقظ حين ينام العالم لتحكمه." }
         ];
 
-        // Updated Schedule based on user input
-        const SCHOOL_SCHEDULE = {
-            1: [ // Monday
-                { start: "08:30", end: "09:30", subject: "الرياضيات" },
-                { start: "09:30", end: "10:30", subject: "الإنجليزية" },
-                { start: "14:30", end: "16:30", subject: "الفرنسية" },
-                { start: "16:30", end: "18:30", subject: "الفيزياء والكيمياء" }
-            ],
-            2: [ // Tuesday
-                { start: "08:30", end: "09:30", subject: "العربية" },
-                { start: "09:30", end: "10:30", subject: "البدنية" },
-                { start: "14:30", end: "16:30", subject: "الرياضيات" },
-                { start: "16:30", end: "17:30", subject: "الإسلامية" },
-                { start: "17:30", end: "18:30", subject: "الاجتماعيات" }
-            ],
-            3: [ // Wednesday
-                { start: "14:30", end: "16:30", subject: "الرياضيات" },
-                { start: "16:30", end: "17:30", subject: "الإنجليزية" },
-                { start: "17:30", end: "18:30", subject: "الإسلامية" }
-            ],
-            4: [ // Thursday
-                { start: "08:30", end: "10:30", subject: "علوم الحياة" },
-                { start: "10:30", end: "12:30", subject: "الفيزياء والكيمياء" },
-                { start: "14:30", end: "15:30", subject: "الفرنسية" },
-                { start: "15:30", end: "16:30", subject: "البدنية" }
-            ],
-            5: [ // Friday
-                { start: "10:30", end: "11:30", subject: "العربية" },
-                { start: "11:30", end: "12:30", subject: "الفلسفة" },
-                { start: "14:30", end: "15:30", subject: "الاجتماعيات" },
-                { start: "15:30", end: "16:30", subject: "الإنجليزية" },
-                { start: "16:30", end: "18:30", subject: "علوم الحياة" }
-            ],
-            6: [ // Saturday
-                { start: "10:30", end: "11:30", subject: "الفلسفة" },
-                { start: "11:30", end: "12:30", subject: "الفرنسية" }
-            ],
-            0: [] // Sunday
-        };
-
-        // Updated Holidays 2025-2026
-        const HOLIDAYS = [
-            { name: "عيد المولد النبوي", start: "2025-09-05", end: "2025-09-06" },
-            { name: "العطلة البينية 1", start: "2025-10-19", end: "2025-10-26" },
-            { name: "المسيرة الخضراء", date: "2025-11-06" },
-            { name: "عيد الاستقلال", date: "2025-11-18" },
-            { name: "العطلة البينية 2", start: "2025-12-07", end: "2025-12-14" },
-            { name: "رأس السنة الميلادية", date: "2026-01-01" },
-            { name: "وثيقة الاستقلال", date: "2026-01-11" },
-            { name: "رأس السنة الأمازيغية", date: "2026-01-14" },
-            { name: "عطلة منتصف السنة", start: "2026-01-25", end: "2026-02-01" },
-            { name: "العطلة البينية 3", start: "2026-03-15", end: "2026-03-22" },
-            { name: "عيد الفطر", start: "2026-03-20", end: "2026-03-24" }, // Approx
-            { name: "عيد الشغل", date: "2026-05-01" },
-            { name: "العطلة البينية 4", start: "2026-05-03", end: "2026-05-10" },
-            { name: "عيد الأضحى", start: "2026-05-27", end: "2026-05-30" }, // Approx
-            { name: "فاتح محرم", date: "2026-06-16" } // Approx
-        ];
-
-        const getCurrentStatus = () => {
-            const now = new Date(); const day = now.getDay(); const time = now.toTimeString().slice(0, 5);
-            const schedule = SCHOOL_SCHEDULE[day];
-            if (!schedule || schedule.length === 0) return { type: 'free', msg: "NO SCHOOL TODAY", sub: "FULL DAY FOR THE ELITE" };
-            for (let cls of schedule) { if (time >= cls.start && time < cls.end) return { type: 'school', msg: cls.subject, sub: `UNTIL ${cls.end}` }; }
-            const lastClass = schedule[schedule.length - 1];
-            if (time >= lastClass.end) return { type: 'free', msg: "SCHOOL OVER", sub: "DEPLOY TO WAR ZONE" };
-            if (time < schedule[0].start) return { type: 'free', msg: "PRE-SCHOOL", sub: `STARTS AT ${schedule[0].start}` };
-            
-            // Check for gap
-            for (let i = 0; i < schedule.length - 1; i++) {
-                if (time >= schedule[i].end && time < schedule[i+1].start) {
-                     return { type: 'gap', msg: "GAP / BREAK", sub: `NEXT: ${schedule[i+1].subject}` };
-                }
-            }
-            
-            return { type: 'gap', msg: "GAP / BREAK", sub: "MAINTAIN FOCUS" };
-        };
-
-        const getNextHoliday = () => {
-            const today = new Date(); today.setHours(0,0,0,0);
-            // Sort holidays by date to ensure we get the nearest one
-            const sortedHolidays = [...HOLIDAYS].sort((a,b) => new Date(a.start || a.date) - new Date(b.start || b.date));
-            
-            for (let h of sortedHolidays) {
-                const hStart = new Date(h.start || h.date);
-                const hEnd = h.end ? new Date(h.end) : new Date(hStart);
-                
-                // If currently in holiday
-                if (today >= hStart && today <= hEnd) return { name: h.name, days: 0, active: true };
-                
-                // If holiday is in future
-                if (hStart > today) { 
-                    const diffTime = Math.abs(hStart - today); 
-                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-                    return { name: h.name, days: diffDays }; 
-                }
-            }
-            return null;
-        };
+        const getCurrentStatus = () => ({ type: 'system', msg: "SYSTEM ONLINE", sub: "WAITING FOR ORDERS" });
+        const getNextHoliday = () => null;
 
         // --- AUDIO ENGINE ---
         const playAlert = (type) => { 
-            // SPECIAL VICTORY SOUND (FILE)
             if (type === 'victory') {
                 const audio = new Audio('https://files.catbox.moe/67rl9x.mp4');
                 audio.volume = 1.0;
@@ -226,7 +128,6 @@
                 return;
             }
 
-            // SYNTH FOR WORK/BREAK
             const AudioContext = window.AudioContext || window.webkitAudioContext;
             if (!AudioContext) return;
             const ctx = new AudioContext();
@@ -271,43 +172,15 @@
 
         const TacticalStatus = () => {
             const [status, setStatus] = useState(getCurrentStatus());
-            const [nextHoliday, setNextHoliday] = useState(getNextHoliday());
-
-            useEffect(() => {
-                const interval = setInterval(() => {
-                    setStatus(getCurrentStatus());
-                    setNextHoliday(getNextHoliday());
-                }, 60000); 
-                return () => clearInterval(interval);
-            }, []);
-
             return (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                    {/* Current Objective */}
-                    <div className={`glass-panel p-4 rounded-sm relative overflow-hidden ${status.type === 'school' ? 'border-l-4 border-gold-warning' : 'border-l-4 border-cold-blue'}`}>
+                <div className="grid grid-cols-1 md:grid-cols-1 gap-4 mb-6">
+                    <div className={`glass-panel p-4 rounded-sm relative overflow-hidden border-l-4 border-cold-blue`}>
                         <div className="relative z-10">
-                            <h3 className="text-[10px] text-gray-400 uppercase tracking-widest mb-1">CURRENT OBJECTIVE</h3>
+                            <h3 className="text-[10px] text-gray-400 uppercase tracking-widest mb-1">CURRENT STATUS</h3>
                             <div className="text-xl font-bold text-white font-mono">{status.msg}</div>
                             <div className="text-xs text-gray-500 mt-1">{status.sub}</div>
                         </div>
-                        <div className={`absolute right-0 bottom-0 w-24 h-24 blur-3xl opacity-20 ${status.type === 'school' ? 'bg-gold-warning' : 'bg-cold-blue'}`}></div>
-                    </div>
-
-                    {/* Next Withdrawal */}
-                    <div className="glass-panel p-4 rounded-sm relative overflow-hidden border-l-4 border-success-green">
-                        <div className="relative z-10">
-                            <h3 className="text-[10px] text-gray-400 uppercase tracking-widest mb-1">STRATEGIC WITHDRAWAL</h3>
-                            {nextHoliday ? (
-                                <>
-                                    <div className="text-xl font-bold text-white font-mono">{nextHoliday.name}</div>
-                                    <div className="text-xs text-gray-500 mt-1">
-                                        {nextHoliday.active ? "ACTIVE NOW" : `IN ${nextHoliday.days} DAYS`}
-                                    </div>
-                                </>
-                            ) : (
-                                <div className="text-gray-600 font-mono text-sm">NO INTEL AVAILABLE</div>
-                            )}
-                        </div>
+                        <div className={`absolute right-0 bottom-0 w-24 h-24 blur-3xl opacity-20 bg-cold-blue`}></div>
                     </div>
                 </div>
             );
@@ -425,11 +298,11 @@
             return (<div className="glass-panel p-4 md:p-6 rounded-sm"><div className="flex justify-between items-center mb-4"><h3 className="text-xs md:text-sm font-bold text-white tracking-widest flex items-center gap-2"><span className="text-cold-blue">///</span> 22-DAY CYCLE</h3>{startDate ? <span className="text-[10px] md:text-xs text-gray-500 font-mono">ACTIVE</span> : <span className="text-[10px] md:text-xs text-gray-500 font-mono animate-pulse">PREVIEW</span>}</div><div className="grid grid-cols-5 md:grid-cols-11 gap-2 md:gap-3">{days.map(i => { const stepDate = getStepDate(i); stepDate.setHours(0,0,0,0); const isDone = i < streak; const isToday = stepDate.getTime() === todayReal.getTime(); let statusClass = "bg-system-gray/20 border-gray-800 text-gray-600"; if (isDone) statusClass = "bg-cold-blue/20 text-cold-blue border-cold-blue shadow-[0_0_10px_rgba(14,165,233,0.3)] font-bold"; else if (isToday) statusClass = "bg-white/10 text-white border-white animate-pulse shadow-[0_0_15px_rgba(255,255,255,0.2)] font-bold z-10 scale-105 ring-1 ring-white/50"; else if (streak === 0 && i === 0) statusClass = "bg-white/5 text-gray-400 border-dashed border-gray-600"; return (<div key={i} className={`aspect-square border flex flex-col items-center justify-center rounded-sm transition-all relative overflow-hidden group ${statusClass}`}><span className="text-[8px] opacity-50 absolute top-0.5 left-1">#{i + 1}</span><span className="text-sm md:text-lg font-mono font-bold mt-1">{formatDayDate(stepDate)}</span><span className="text-[7px] md:text-[8px] uppercase opacity-60 font-mono tracking-tighter hidden xs:block">{formatMonth(stepDate)}</span>{isToday && <div className="absolute inset-0 border-2 border-cold-blue opacity-50"></div>}</div>); })}</div></div>);
         };
 
-        const Dashboard = ({ streak, handleCheckIn, handleUndoCheckIn, lastCheckIn, startDate, missedDaysMsg, patterns, customRules, setUrgeMode }) => {
+        const Dashboard = ({ streak, handleCheckIn, handleUndoCheckIn, lastCheckIn, startDate, missedDaysMsg, patterns, customRules }) => {
             const isTodayChecked = lastCheckIn === new Date().toDateString();
             return (
                 <div className="space-y-4 md:space-y-6 animate-fade-in max-w-5xl mx-auto pb-20 md:pb-0">
-                    <header className="mb-4 md:mb-8 flex justify-between items-center"><div><h2 className="text-2xl md:text-3xl font-bold text-white mb-1 tracking-tight">COMMAND CENTER</h2><p className="text-xs md:text-sm text-text-mute font-mono">> USER: THE_OBSERVER <br className="md:hidden"/> > PROTOCOL: ELITE V2.1</p></div><div className="md:hidden"><Clock mobile={true} /></div></header>
+                    <header className="mb-4 md:mb-8 flex justify-between items-center"><div><h2 className="text-2xl md:text-3xl font-bold text-white mb-1 tracking-tight">COMMAND CENTER</h2><p className="text-xs md:text-sm text-text-mono font-mono">> USER: THE_OBSERVER <br className="md:hidden"/> > PROTOCOL: ELITE V2.4</p></div><div className="md:hidden"><Clock mobile={true} /></div></header>
                     {missedDaysMsg && (<div className="p-3 md:p-4 bg-danger-red/10 border border-danger-red text-danger-red font-mono text-xs md:text-sm rounded-sm mb-4 flex items-center gap-3 animate-pulse"><span className="text-xl">⚠</span><div><div className="font-bold">STATUS REPORT</div><div>{missedDaysMsg}</div></div></div>)}
                     <TacticalStatus />
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
@@ -526,7 +399,7 @@
             );
         };
 
-        const CloudSettings = ({ cloudConfig, saveCloudConfig, syncStatus, isSyncing, debugLogs, disconnect, manualPush, manualPull, unsavedChanges }) => {
+        const CloudSettings = ({ cloudConfig, saveCloudConfig, syncStatus, isSyncing, debugLogs, disconnect, manualPush, manualPull, unsavedChanges, streak, tasks, patterns, taskArchive }) => {
             const [apiKey, setApiKey] = useState(cloudConfig.apiKey || "");
             const [projectId, setProjectId] = useState(cloudConfig.projectId || "");
             const [secretId, setSecretId] = useState(cloudConfig.secretId || "COMMANDER_X");
@@ -534,10 +407,11 @@
             
             return (
                 <div className="max-w-4xl mx-auto glass-panel p-6 rounded-sm animate-fade-in pb-20">
-                    <h2 className="text-2xl font-bold text-white mb-6 tracking-widest flex items-center gap-2"><span className="text-cold-blue">☁</span> CLOUD CONTROL V2.1</h2>
+                    <h2 className="text-2xl font-bold text-white mb-6 tracking-widest flex items-center gap-2"><span className="text-cold-blue">☁</span> CLOUD CONTROL V2.4</h2>
                     
                     {/* MANUAL SYNC CONTROLS */}
-                    {syncStatus.includes("CONNECTED") && (
+                    {/* FIXED: Show if CONNECTED or AUTO-SYNCED */}
+                    {(syncStatus.includes("CONNECTED") || syncStatus === "AUTO-SYNCED" || syncStatus.includes("UPLOADED")) && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
                             <button onClick={manualPush} className="p-6 border border-cold-blue bg-cold-blue/10 hover:bg-cold-blue hover:text-black transition-all group text-left relative overflow-hidden">
                                 <div className="relative z-10">
@@ -558,6 +432,8 @@
                         1. Go to <a href="https://console.firebase.google.com" target="_blank" className="text-cold-blue underline">Firebase Console</a>.<br/>
                         2. Create Project -> Build -> Firestore Database -> "Start in Test Mode".<br/>
                         3. Project Settings -> General -> Copy API Key & Project ID.
+                        <br/><br/>
+                        <strong className="text-danger-red block">PROTOCOL:</strong> Clicking CONNECT will AUTO-DOWNLOAD. UPLOAD checks for data first.
                     </div>
                     <div className="space-y-4 font-mono">
                         <div><label className="text-xs text-gray-500 block mb-1">FIREBASE API KEY</label><input value={apiKey} onChange={e => setApiKey(e.target.value)} className="w-full bg-black/50 border border-white/20 p-2 text-white outline-none focus:border-cold-blue text-sm" type="password" placeholder="AIzaSy..." /></div>
@@ -569,7 +445,7 @@
                         <button onClick={handleSave} className="px-6 py-3 bg-white/5 border border-white/20 text-white font-bold text-sm hover:bg-white hover:text-black transition-all rounded-sm">CONNECT</button>
                         <button onClick={disconnect} className="px-6 py-3 border border-danger-red text-danger-red font-bold text-sm hover:bg-danger-red hover:text-white transition-all rounded-sm">DISCONNECT</button>
                         <div className="text-xs font-mono">
-                            STATUS: <span className={syncStatus.includes('CONNECTED') ? 'text-green-500' : syncStatus.includes('ERROR') ? 'text-danger-red' : 'text-gray-500'}>{syncStatus}</span>
+                            STATUS: <span className={syncStatus.includes('CONNECTED') || syncStatus === 'AUTO-SYNCED' ? 'text-green-500' : syncStatus.includes('ERROR') ? 'text-danger-red' : 'text-gray-500'}>{syncStatus}</span>
                             {isSyncing && <span className="ml-2 text-cold-blue animate-pulse">...BUSY</span>}
                         </div>
                     </div>
@@ -593,7 +469,6 @@
         // --- MAIN SHELL ---
         const System22Desktop = () => {
             const [view, setView] = useState('dashboard');
-            // Core State
             const [streak, setStreak] = useState(0);
             const [lastCheckIn, setLastCheckIn] = useState(null);
             const [startDate, setStartDate] = useState(null); 
@@ -603,10 +478,8 @@
             const [taskArchive, setTaskArchive] = useState([]);
             const [cloudConfig, setCloudConfig] = useState({ apiKey: "", projectId: "", secretId: "" });
             
-            // Sync Control
             const [unsavedChanges, setUnsavedChanges] = useState(false); 
             const [debugLogs, setDebugLogs] = useState([]);
-
             const [missedDaysMsg, setMissedDaysMsg] = useState(null);
             const [pomoState, setPomoState] = useState({ active: false, type: 'work', currentCycle: 1, totalCycles: 1, workDur: 25, breakDur: 5 });
             const [timer, setTimer] = useState(0);
@@ -614,7 +487,6 @@
             const [activeTask, setActiveTask] = useState(null);
             const [pendingTask, setPendingTask] = useState(null);
             const [showPhoneCheck, setShowPhoneCheck] = useState(false);
-            const [urgeMode, setUrgeMode] = useState(false);
             const [syncStatus, setSyncStatus] = useState("OFFLINE");
             const [isSyncing, setIsSyncing] = useState(false);
             
@@ -662,7 +534,6 @@
                 loadLocal();
             }, []);
 
-            // Save changes locally
             useEffect(() => { localStorage.setItem('s22_patterns', JSON.stringify(patterns)); }, [patterns]);
             useEffect(() => { localStorage.setItem('s22_streak', streak); }, [streak]);
             useEffect(() => { localStorage.setItem('s22_lastCheck', lastCheckIn); }, [lastCheckIn]);
@@ -672,30 +543,75 @@
             useEffect(() => { localStorage.setItem('s22_archive', JSON.stringify(taskArchive)); }, [taskArchive]);
             useEffect(() => localStorage.setItem('s22_cloudConfig', JSON.stringify(cloudConfig)), [cloudConfig]);
 
-            // --- INITIALIZE CLOUD ONLY ---
+            // --- INITIALIZE CLOUD AND AUTO DOWNLOAD ---
             useEffect(() => {
                 if (!cloudConfig.apiKey || !cloudConfig.projectId || !cloudConfig.secretId) return;
 
-                const connectToCloud = async () => {
+                const connectAndAutoPull = async () => {
                     const appConfig = { apiKey: cloudConfig.apiKey, projectId: cloudConfig.projectId };
+                    
                     try {
-                        const app = window.firebaseModules.initializeApp(appConfig);
-                        setSyncStatus("CONNECTED (STANDBY)");
-                        addDebugLog("Cloud initialized. Waiting for manual commands.");
+                        // 1. Initialize Firebase
+                        let db;
+                        try {
+                            const app = window.firebaseModules.initializeApp(appConfig);
+                            db = window.firebaseModules.getFirestore();
+                            addDebugLog("Cloud initialized.");
+                        } catch (initError) {
+                            if (initError.code === 'app/duplicate-app') {
+                                db = window.firebaseModules.getFirestore();
+                                addDebugLog("Cloud connection restored.");
+                            } else {
+                                throw initError;
+                            }
+                        }
+
+                        // 2. AUTO PULL (DOWNLOAD) LOGIC
+                        const docRef = window.firebaseModules.doc(db, "systems", cloudConfig.secretId);
+                        const docSnap = await window.firebaseModules.getDoc(docRef);
+                        
+                        if (docSnap.exists()) {
+                            const data = docSnap.data();
+                            addDebugLog("Data found in cloud. Auto-restoring...");
+                            
+                            // Apply data directly to state
+                            if(data.streak !== undefined) setStreak(data.streak);
+                            if(data.patterns) setPatterns(JSON.parse(data.patterns));
+                            if(data.tasks) setTasks(JSON.parse(data.tasks));
+                            if(data.archive) setTaskArchive(JSON.parse(data.archive));
+                            if(data.rules) setCustomRules(JSON.parse(data.rules));
+                            if(data.lastCheckIn) setLastCheckIn(data.lastCheckIn);
+                            if(data.startDate) setStartDate(data.startDate);
+                            
+                            setSyncStatus("AUTO-SYNCED");
+                            setUnsavedChanges(false);
+                            addDebugLog("Auto-Restore successful.");
+                        } else {
+                            setSyncStatus("CONNECTED (NEW)");
+                            addDebugLog("Cloud initialized. No existing data found (New System).");
+                        }
+
                     } catch (e) {
-                        console.error("Firebase Init Error", e);
-                        setSyncStatus("CONFIG ERROR");
-                        addDebugLog(`Config Error: ${e.message}`);
+                        console.error("Cloud Init/Pull Error", e);
+                        setSyncStatus("ERROR");
+                        addDebugLog(`Error: ${e.message}`);
                     }
                 };
                 
-                connectToCloud();
+                connectAndAutoPull();
             }, [cloudConfig.apiKey, cloudConfig.projectId, cloudConfig.secretId]);
 
             // --- MANUAL PUSH (UPLOAD) ---
             const manualPush = async () => {
                 if (syncStatus.includes("ERROR") || !cloudConfig.secretId || !window.firebaseModules) {
                     alert("CLOUD NOT CONNECTED");
+                    return;
+                }
+
+                // VALIDATION: Check if system is completely empty
+                const isEmpty = streak === 0 && tasks.length === 0 && patterns.length === 0 && taskArchive.length === 0;
+                if (isEmpty) {
+                    alert("CRITICAL WARNING: SYSTEM EMPTY.\n\nNothing to upload. Uploading blank data will wipe your cloud history.\nAction Aborted.");
                     return;
                 }
 
@@ -716,7 +632,7 @@
                     };
 
                     await window.firebaseModules.setDoc(docRef, payload);
-                    setSyncStatus("CONNECTED (LAST: UPLOAD)");
+                    setSyncStatus("UPLOADED");
                     setUnsavedChanges(false);
                     addDebugLog("Manual Upload Successful.");
                 } catch (e) {
@@ -757,7 +673,7 @@
                         if(data.lastCheckIn) setLastCheckIn(data.lastCheckIn);
                         if(data.startDate) setStartDate(data.startDate);
                         
-                        setSyncStatus("CONNECTED (LAST: DOWNLOAD)");
+                        setSyncStatus("DOWNLOADED");
                         setUnsavedChanges(false);
                         addDebugLog("Manual Download Successful.");
                     } else {
@@ -773,12 +689,8 @@
                 }
             };
 
-            // --- HELPER TO MARK LOCAL CHANGES ---
-            const markLocalChange = () => {
-                setUnsavedChanges(true);
-            };
+            const markLocalChange = () => { setUnsavedChanges(true); };
 
-            // --- ACTIONS ---
             const handleCheckIn = (success) => {
                 const today = new Date().toDateString();
                 if (lastCheckIn === today) return;
@@ -836,14 +748,32 @@
             };
             
             const initiateTaskSequence = (task) => { setPendingTask(task); setShowPhoneCheck(true); };
-            const confirmPhoneCheck = () => { setShowPhoneCheck(false); if (pendingTask) { setActiveTask(pendingTask); startPomoSequence(pendingTask.work, pendingTask.break, pendingTask.cycles); playAlert('work'); setView('deepwork'); } };
+            
+            const confirmPhoneCheck = () => { 
+                setShowPhoneCheck(false); 
+                // --- AUTO FULLSCREEN ---
+                try {
+                    const docElm = document.documentElement;
+                    if (docElm.requestFullscreen) {
+                        docElm.requestFullscreen();
+                    }
+                } catch (e) { console.log("Fullscreen blocked or not supported"); }
+                
+                if (pendingTask) { 
+                    setActiveTask(pendingTask); 
+                    startPomoSequence(pendingTask.work, pendingTask.break, pendingTask.cycles); 
+                    playAlert('work'); 
+                    setView('deepwork'); 
+                } 
+            };
+
             const cancelTask = () => { if(confirm("ABORT OPERATION?")) { setIsTimerRunning(false); setActiveTask(null); setPomoState({ ...pomoState, active: false }); setTimer(0); } };
             const startPomoSequence = (workDur, breakDur, cycles) => { setPomoState({ active: true, type: 'work', currentCycle: 1, totalCycles: cycles, workDur, breakDur }); setTimer(workDur * 60); setIsTimerRunning(true); };
             const formatTime = (sec) => { const m = Math.floor(sec / 60); const s = sec % 60; return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`; };
             
             const saveCloudConfig = (config) => { 
                 setCloudConfig(config); 
-                setSyncStatus("RECONNECTING...");
+                setSyncStatus("CONNECTING...");
             };
 
             const disconnect = () => {
@@ -854,7 +784,7 @@
                 }
             };
 
-            // Timer Tick Effect (Does not trigger save)
+            // Timer Tick Effect
             useEffect(() => {
                 let interval = null;
                 if (isTimerRunning && timer > 0) { 
@@ -897,7 +827,6 @@
             return (
                 <div className="flex flex-col md:flex-row h-screen w-full bg-void-bg text-gray-200 overflow-hidden relative selection:bg-cold-blue selection:text-black">
                     <div className="scanline-bar"></div><div className="crt-overlay"></div><div className="absolute inset-0 bg-grid-pattern opacity-10 pointer-events-none"></div>
-                    {/* Phone Check Modal */}
                     {showPhoneCheck && (
                         <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4">
                             <div className="glass-panel p-8 max-w-sm w-full text-center border-danger-red animate-pulse">
@@ -914,12 +843,12 @@
 
                     <div className="hidden md:block h-full z-20"><Sidebar view={view} setView={setView} unsavedChanges={unsavedChanges} /></div>
                     <main className="flex-1 h-full overflow-y-auto overflow-x-hidden relative p-4 md:p-8 z-10 custom-scrollbar">
-                        {view === 'dashboard' && <Dashboard streak={streak} handleCheckIn={handleCheckIn} handleUndoCheckIn={handleUndoCheckIn} lastCheckIn={lastCheckIn} startDate={startDate} missedDaysMsg={missedDaysMsg} patterns={patterns} customRules={customRules} setUrgeMode={setUrgeMode} />}
+                        {view === 'dashboard' && <Dashboard streak={streak} handleCheckIn={handleCheckIn} handleUndoCheckIn={handleUndoCheckIn} lastCheckIn={lastCheckIn} startDate={startDate} missedDaysMsg={missedDaysMsg} patterns={patterns} customRules={customRules} />}
                         {view === 'tasks' && <><TaskManager tasks={tasks} addTask={addTask} deleteDirect={deleteDirect} startTaskExecution={initiateTaskSequence} /><SuccessArchive archive={taskArchive} deleteDirect={deleteDirect} /></>}
                         {view === 'deepwork' && <DeepWork activeTask={activeTask} pomoState={pomoState} setPomoState={setPomoState} timer={timer} isTimerRunning={isTimerRunning} startPomoSequence={startPomoSequence} formatTime={formatTime} toggleNoise={toggleNoise} isNoiseOn={isNoiseOn} toggleTick={toggleTick} isTickOn={isTickOn} toggleBlue={toggleBlue} isBlueOn={isBlueOn} cancelTask={cancelTask} />}
                         {view === 'heatmap' && <HeatmapLogs patterns={patterns} addLog={addLog} deleteLog={deleteLog} updateLog={updateLog} />}
                         {view === 'protocol' && <Protocol customRules={customRules} addRule={addRule} deleteRule={deleteRule} updateRule={updateRule} />}
-                        {view === 'cloud' && <CloudSettings cloudConfig={cloudConfig} saveCloudConfig={saveCloudConfig} syncStatus={syncStatus} isSyncing={isSyncing} debugLogs={debugLogs} disconnect={disconnect} manualPush={manualPush} manualPull={manualPull} unsavedChanges={unsavedChanges} />}
+                        {view === 'cloud' && <CloudSettings cloudConfig={cloudConfig} saveCloudConfig={saveCloudConfig} syncStatus={syncStatus} isSyncing={isSyncing} debugLogs={debugLogs} disconnect={disconnect} manualPush={manualPush} manualPull={manualPull} unsavedChanges={unsavedChanges} streak={streak} tasks={tasks} patterns={patterns} taskArchive={taskArchive} />}
                     </main>
                     <div className="md:hidden z-50"><MobileNav view={view} setView={setView} /></div>
                 </div>
